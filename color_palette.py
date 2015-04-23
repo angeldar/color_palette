@@ -9,10 +9,10 @@ def get_pixel_color(rgb_img, i, j):
 	return colors
 
 def draw_sample(top_colors, k):
-	im = Image.new('RGB', (200, k * 100), (255, 255, 255))
+	im = Image.new('RGB', (200, k * 100), (0, 0, 0))
 	dr = ImageDraw.Draw(im)
 	for i in range(0, k):
-		dr.rectangle(((0, i * 100),(200, 100 + i * 100)), fill = top_colors[i])
+		dr.rectangle(((0, i * 100), (200, 100 + i * 100)), fill = top_colors[i])
 	im.save("palette.png")
 
 def get_pixels(img):
@@ -32,9 +32,9 @@ def dist(p1, p2):
 	return sqrt(sum([(p1[i] - p2[i])**2 for i in xrange(len(p1))]))
 
 def resize(img, size = 200):
-	img.thumbnail((200, 200))
+	img.thumbnail((size, size))
 	return img
-
+	
 def find_closest(point, points_arr):
 	idx = 0
 	min_dist = dist(point, points_arr[0])
@@ -53,13 +53,10 @@ def find_closest_point_idx(point, points_arr):
 	idx, closest_point = find_closest(point, points_arr)
 	return idx
 
-def center_cluster(old_cluster, points):
-	new_cluster = [0, 0, 0]
-	for point in points:
-		for coord in range(len(point)):
-			new_cluster[coord] += point[coord]
-	new_cluster = map(lambda x: x / (len(points) + 1.0), new_cluster)
-	return new_cluster
+def center_cluster(points):
+	points.append([0,0,0]) # If points is empty - should have 1 item to reduce
+	new_cluster = reduce(lambda p1, p2: [p1[i] + p2[i] for i in xrange(len(p1))], points)
+	return map(lambda x: x / (len(points) + 1.0), new_cluster)
 
 def dist_btw_clusters(clustA, clustB):
 	return sum([dist(clustA[i], clustB[i]) for i in
@@ -80,13 +77,13 @@ def kmeans(points, k = 6):
 			closest_idx = find_closest_point_idx(point, clusters)
 			closest[closest_idx].append(point)
 		old_clusters = clusters[:]
-		for i in range(k):
-			clusters[i] = center_cluster(clusters[i], closest[i])
+		clusters = map(lambda arr: center_cluster(arr), closest)
 		iter += 1
 		if dist_btw_clusters(old_clusters, clusters) < diff or iter > max_iter:
 			break
 
-	return map(lambda p: (to_int(p[0]), to_int(p[1]), to_int(p[2])), clusters)
+	return map(lambda clust: (
+		map(lambda val: to_int(val), clust)), clusters)
 
 def get_palette_from_img(img, k):
 	img = resize(img, THUMBNAIL_SIZE)
@@ -101,6 +98,6 @@ def get_palette_from_path(path, k):
 
 if __name__ == '__main__':
 	k = 6
-	im =Image.open("woman1.jpg")
+	im =Image.open("tree1.jpg")
 	palette = get_palette_from_img(im, k)
 	draw_sample(sorted(palette), k)
